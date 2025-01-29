@@ -1,0 +1,61 @@
+services:
+  open-webui-ollama:
+    image: ghcr.io/open-webui/open-webui:ollama
+    container_name: open-webui-ollama
+    restart: always
+    ports:
+      - "3001:8080" # Ollama service runs on a different port
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: ["gpu"]
+    volumes:
+      - open-webui:/app/backend/data
+    environment:
+      - OLLAMA_API_HOST=${OLLAMA_API_HOST:-host.docker.internal:11434}
+      - DOCKER_HOST=${DOCKER_HOST:-unix:///var/run/docker.sock}
+    networks:
+      - ollama-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+      - "localhost:127.0.0.1"
+
+  open-webui-cuda:
+    image: ghcr.io/open-webui/open-webui:cuda
+    container_name: open-webui-cuda
+    restart: always
+    ports:
+      - "3002:8080" # CUDA service runs on another port
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: ["gpu"]
+    volumes:
+      - open-webui:/app/backend/data
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+      - "localhost:127.0.0.1"
+    environment:
+      - OLLAMA_API_HOST=${OLLAMA_API_HOST:-host.docker.internal:11434}
+      - DOCKER_HOST=${DOCKER_HOST:-unix:///var/run/docker.sock}
+    networks:
+      - ollama-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  open-webui:
+
+networks:
+  ollama-network:
+    driver: bridge
